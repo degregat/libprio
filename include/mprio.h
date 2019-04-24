@@ -172,6 +172,13 @@ void PublicKey_clear(PublicKey pubkey);
 void PrivateKey_clear(PrivateKey pvtkey);
 
 /*
+ * Encode n-bit integer arrays as boolean arrays to feed to
+ * PrioPacketClient_encode
+ */
+SECStatus
+PrioClient_longs_to_bools(int nbit, int intdata, const long* data_in, bool* data_out);
+
+/*
  *  PrioPacketClient_encode
  *
  * Takes as input a pointer to an array (`data_in`) of boolean values
@@ -297,6 +304,14 @@ SECStatus PrioTotalShare_final(const_PrioConfig cfg, unsigned long long* output,
                                const_PrioTotalShare tA,
                                const_PrioTotalShare tB);
 
+/*
+ * Reconstruct integer sums from the aggregated booleans.
+ */
+SECStatus
+PrioTotalShare_final_to_int(const_PrioConfig cfg, int nbit,
+			    unsigned long long* output,
+			    unsigned long long* output_int);
+  
 #endif /* __PRIO_H__ */
 
 #ifdef __cplusplus

@@ -277,6 +277,48 @@ PrioPacketClient_areEqual(const_PrioPacketClient p1, const_PrioPacketClient p2)
 }
 
 SECStatus
+PrioClient_longs_to_bools(int nbit, int intdata, const long* data_in, bool* data_out)
+{
+  //TODO: Do we need lengths of data_in and data_out and do a check?
+  SECStatus rv = SECSuccess;
+  
+  mp_int a;
+  char* bits;
+  
+  for (int i = 0; i < intdata; i++) {
+    MP_DIGITS(&a) = NULL;
+    MP_CHECKC(mp_init(&a));
+    
+    mp_set(&a, data_in[i]);
+    P_CHECKA(bits = malloc(mp_radix_size(&a, 2)));
+    
+    mp_toradix(&a, bits, 2);
+    int blen = strlen(bits);
+
+    // Check whether each integer is representable with at most n-bits.
+    P_CHECKCB(blen <= nbit);
+        
+    // Copy bits to bool array using a big endian n-bit fixed width code.
+    for (int j = 0; j < nbit-blen; j++) {
+      data_out[i*nbit+j] = 0;
+    }
+    for (int j = nbit-blen; j < nbit; j++) {
+      data_out[i*nbit+j] = mp_tovalue(bits[j-(nbit-blen)], 2);
+    }
+    
+    free(bits);
+    mp_clear(&a);
+  }
+
+cleanup:
+  if (rv != SECSuccess) {
+    free(bits);
+    mp_clear(&a);
+  }
+  return rv;
+}
+
+SECStatus
 PrioClient_encode(const_PrioConfig cfg, const bool* data_in,
                   unsigned char** for_server_a, unsigned int* aLen,
                   unsigned char** for_server_b, unsigned int* bLen)

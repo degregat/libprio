@@ -118,6 +118,9 @@ PrioTotalShare_set_data(PrioTotalShare t, const_PrioServer s)
   return rv;
 }
 
+// TODO: Implement PrioTotalShare_set_data_int to prevent leakage of
+// partial sums.
+
 SECStatus
 PrioTotalShare_final(const_PrioConfig cfg, unsigned long long* output,
                      const_PrioTotalShare tA, const_PrioTotalShare tB)
@@ -147,6 +150,62 @@ PrioTotalShare_final(const_PrioConfig cfg, unsigned long long* output,
 
 cleanup:
   mp_clear(&tmp);
+  return rv;
+}
+
+SECStatus
+PrioTotalShare_final_to_int(const_PrioConfig cfg, int nbit, unsigned long long* output, unsigned long long* output_int)
+{
+  // TODO: Do we need length checks? How do we handle submissions
+  // rejected by the servers?
+  SECStatus rv = SECSuccess;
+
+  mp_int tmp;
+  mp_int pow2;
+  mp_int bitj;
+  mp_int partsum;
+  int outpos = 0;
+    
+  for(int i = 0; i < cfg->num_data_fields; i = i+nbit) {
+    MP_DIGITS(&tmp) = NULL;
+    MP_CHECKC(mp_init(&tmp));
+    mp_zero(&tmp);
+
+    for (int j = 0; j < nbit; j++) {
+      MP_DIGITS(&pow2) = NULL;
+      MP_CHECKC(mp_init(&pow2));
+      MP_DIGITS(&bitj) = NULL;
+      MP_CHECKC(mp_init(&bitj));
+      MP_DIGITS(&partsum) = NULL;
+      MP_CHECKC(mp_init(&partsum));
+
+      // nbit-1-j because of big endianness
+      MP_CHECKC(mp_2expt(&pow2, nbit-1-j));
+      MP_CHECKC(mp_set_ulong(&bitj, output[i+j]));      
+      MP_CHECKC(mp_mul(&pow2, &bitj, &partsum));
+      MP_CHECKC(mp_add(&tmp, &partsum, &tmp));
+      // tmp = tmp + (nbit-1-j)^2 * output[i+j]
+      
+      mp_clear(&pow2);
+      mp_clear(&bitj);
+      mp_clear(&partsum);
+    }
+
+    if (MP_USED(&tmp) > 1) {
+      P_CHECKCB(false);
+    }
+    output_int[outpos] = MP_DIGIT(&tmp, 0);
+    outpos++;
+    mp_clear(&tmp);
+  }
+
+cleanup:
+  if (rv != SECSuccess) {
+    mp_clear(&tmp);
+    mp_clear(&pow2);
+    mp_clear(&bitj);
+    mp_clear(&partsum);
+  }
   return rv;
 }
 

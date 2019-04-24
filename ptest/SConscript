@@ -10,6 +10,7 @@ test_srcs = [
     "example_test.c",
     "encrypt_test.c",
     "fft_test.c",
+    "integer_test.c",
     "mpi_test.c",
     "prg_test.c",
     "rand_test.c",
